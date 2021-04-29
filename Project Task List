@@ -1,0 +1,14 @@
+Python Code Task List
+  - Based off of word document from class 4/29
+
+1. UI (Streamlitio) - Chris + Others
+
+2. Backend Python Ingestion - Others + Chris
+
+2a. Word Embeddings - Multiple? 
+  - GloVe (gensim package) - Mark
+    
+2b. Analysis of Word Embeddings - Multiple? 
+  
+2c. Output from Backend to Frontend UI - Multiple? 
+
