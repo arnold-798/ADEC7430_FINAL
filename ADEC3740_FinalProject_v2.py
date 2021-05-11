@@ -73,16 +73,22 @@ def instructions():
 #os.mkdir(new_path)
 
 ## this should only be run once, after downloading the big data above
-t0 = dt.datetime.now()
-with open("https://github.com/arnold-798/ADEC7430_FINAL/main/glove-wiki-gigaword-50.pkl", 'wb') as tf:
-  pickle.dump(wv, tf)
-t1 = dt.datetime.now()
-print("This took: ", (t1-t0))
+#t0 = dt.datetime.now()
+#with open("/Users/chrisarnold/Desktop/Big_Data_Econometrics/PyEnvs/final_project/glove-wiki-gigaword-50.pkl", 'wb') as tf:
+#  pickle.dump(wv, tf)
+#t1 = dt.datetime.now()
+#print("This took: ", (t1-t0))
 #st.write(("Loading data took: " + (t1-t0)))
 
 #t0 = dt.datetime.now()
-with open("https://github.com/arnold-798/ADEC7430_FINAL/main/glove-wiki-gigaword-50.pkl", 'rb') as tf:
-  wv = pickle.load(tf)
+
+github_pkl = "https://github.com/arnold-798/ADEC7430_FINAL/raw/main/glove-wiki-gigaword-50.pkl"
+
+wv = pd.read_pickle(github_pkl, compression='infer', storage_options=None)
+
+#with open("/Users/chrisarnold/Desktop/Big_Data_Econometrics/PyEnvs/final_project/glove-wiki-gigaword-50.pkl", 'rb') as tf:
+#  wv = pickle.load(tf)
+
 #t1 = dt.datetime.now()
 #print("This took: ", (t1-t0))
 #st.write('Loading data took: ',t1-t0)
