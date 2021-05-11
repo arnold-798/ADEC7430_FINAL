@@ -81,7 +81,7 @@ def instructions():
 #st.write(("Loading data took: " + (t1-t0)))
 
 #t0 = dt.datetime.now()
-with open("https://github.com/arnold-798/ADEC7430_FINAL/main/glove-wiki-gigaword-50.pkl", 'rb') as tf:
+with open("/Users/chrisarnold/Desktop/Big_Data_Econometrics/PyEnvs/final_project/glove-wiki-gigaword-50.pkl", 'rb') as tf:
   wv = pickle.load(tf)
 #t1 = dt.datetime.now()
 #print("This took: ", (t1-t0))
