@@ -56,6 +56,7 @@ def instructions():
 
 ## Ingest the two google news word embeddings dataset - Should only be run during development; the created index dataset is what should be
 ## Saveed to the github repository
+
 #@st.cache
 #def load_embeddings(): 
 #    wv = api.load(name = 'word2vec-google-news-300') # Google News Dataset ~ 100 billion words
@@ -125,7 +126,7 @@ word_index_df = pd.DataFrame(tdict)
 # 4. adds the vectors together to get a single 300-dim vector
 #.....
 
-#sample = "5*king - man + 2*woman"
+sample = "5*king - man + 2*woman"
 #sample1 = "+king-man+woman" 
 #sample2 = "+5*king - 1*man + 2*woman"
 #sample3 = "+5.3*king - 1.2*man + 2.2*woman" 
@@ -134,26 +135,33 @@ word_index_df = pd.DataFrame(tdict)
 
 # Parse function ingests the input query and spits out a pandas DataFrame that allows us to analyze the string
 
-def parse(inpt):
+def parse(inpt, DEBUG=False):
   inpt1 = re.sub(r"\s","", inpt) # get rid of white spaces
-  inpt1 = re.sub("(?P<sign>[+-])(?P<let>[a-zA-Z])","\g<sign>1*\g<let>", inpt1)
   if inpt1[0] not in ["+", "-"]: # add sign to start of string
     inpt1 = "+" + inpt1
+  inpt1 = re.sub("(?P<sign>[+-])(?P<let>[a-zA-Z])","\g<sign>1*\g<let>", inpt1)
+  if DEBUG:
+    print(inpt1)
   wordlist = re.findall("[A-Za-z]+", inpt1) # returns all words in string
   signlist = re.findall("[+-]", inpt1) # returns all signs in string
   numlist = re.findall("[\d.]+", inpt1) # returns all numbers in string
   numlist = [float(i) for i in numlist] # convert string numbers to floats
+  if DEBUG:
+      print(wordlist,signlist, numlist)
   for i in range(0,len(numlist)):
     if signlist[i] == '-':
       numlist[i] = (-1)*numlist[i]
-  finallist = [wordlist, numlist]
-  pstring_dict = {'Original_String':inpt1, 'Words_List':wordlist, 'Signs_List':signlist, 'Coef_List':numlist} 
+  #pstring_dict = {'Original_String':inpt1, 'Words_List':wordlist, 'Signs_List':signlist, 'Coef_List':numlist} 
+  if DEBUG:
+      print(numlist)
   pstring_dictv2 = {'Words_List':wordlist, 'Coef_List':numlist} 
   # Chris: I changed the output of the parse function to a dictionary so we could reference the ouptut more readily 
   # in the "create_vector" function below
   #pstring_df = pd.DataFrame(pstring_dict)
   return pstring_dictv2
 
+#%%
+#parse()
 #%% Test out the parse function
 
 #print(parse(sample))
@@ -188,52 +196,82 @@ def parse(inpt):
     
 #%% Test code for the create vector function
 
-#parsed_string = parse(sample)
+parsed_string = parse(sample)
 
 # Parse the input string and grab the individual words, signs and numbers     
-#word_list = list(parsed_string['Words_List'])
-#num_list = list(parsed_string['Coef_List'])
+word_list = list(parsed_string['Words_List'])
+num_list = list(parsed_string['Coef_List'])
 
 # Loop through each word in the list to find the associated index in the word embedings dataframe
 
-#for indiv_word in word_list:
+for i in range(len(word_list)):
+        
+    indiv_word = word_list[i]
     
-#    word_index = word_index_df['word'] == indiv_word
-#    word_vector = word2vec.vectors[word_index]
-#    
-#    adj_word_vec = (map(lambda x: word_vector * x, num_list))
-#
-#    unique_wordvec = np.array(sum(adj_word_vec))
+    word_index = word_index_df[word_index_df['word'] == indiv_word]
+    word_vector = word2vec.vectors[word_index['index']]
+    
+    adj_word_vec = word_vector * num_list[i]
+    
+    #adj_word_vec = map(lambda x: word_vector * x, num_list)
+    
+    if i == 0:
+        unique_wordvec = adj_word_vec
+    else:
+        unique_wordvec += adj_word_vec
 
     
 #%% Create the get vector function 
 
 # create_vector function takes the parsed input string, applys the coefficients, 
 
-def create_vector(parsed_string):
+def create_vector(parsed_string, DEBUG=False):
     
     # Parse the input string and grab the individual words, signs and numbers     
-    word_list = list(parsed_string['Words_List'])
-    num_list = list(parsed_string['Coef_List'])
-    
+    word_list = parsed_string['Words_List']
+    num_list = parsed_string['Coef_List']
+    if DEBUG:
+        print(word_list)
+        print(num_list)
+        print(parsed_string)
     # Loop through each word in the list to find the associated index in the word embedings dataframe
-    
-    for indiv_word in word_list:
+        print(len(word_list))
+    for i in range(len(word_list)):
+            
+        indiv_word = word_list[i]
         
         word_index = word_index_df[word_index_df['word'] == indiv_word]
         word_vector = word2vec.vectors[word_index['index']]
+        adj_word_vec = word_vector * num_list[i]
+        if DEBUG:
+            print('indiv_word:',indiv_word) 
+            print('word_vector', word_vector)
+            print('adj_word_vec', adj_word_vec)
         
-        adj_word_vec = map(lambda x: word_vector * x, num_list)
-    
-        unique_wordvec = sum(adj_word_vec)
+        #adj_word_vec = map(lambda x: word_vector * x, num_list)
+        
+        if i == 0:
+            unique_wordvec = adj_word_vec
+        else:
+            unique_wordvec += adj_word_vec
             
-        return unique_wordvec
+    unique_wordvec_v1 = unique_wordvec[0]
+            
+    return unique_wordvec_v1
+    
+#%%
+# v1 = create_vector(parse("king-man+5*woman"),DEBUG=False)
+# v2 = create_vector(parse("-man+king+5*woman"),DEBUG=False)
+# print(np.max(np.abs(v1-v2)))
+# print(v1, v2)
+# parse("king-man+5*woman",DEBUG=True)
+# parse("-man+king+5*woman",DEBUG=True)
         
 #%% Test out create_vector function on sample string - These functions will build the larger one
 
-#test = parse(sample)
+test = parse(sample)
 
-#test_vec = create_vector(test)
+unique_wordvec = create_vector(test)
 
 #%% Problem #1 to discuss:    
 
@@ -257,7 +295,7 @@ vectors_norm = word2vec.vectors.copy()
 #np.floor_divide(x1, x2) # for integer division
 
 # compute lengths in blocks
-#t0 = dt.datetime.now()
+t0 = dt.datetime.now()
 blocksize = 100
 blocks = int(np.ceil(word2vec.vectors.shape[0]/blocksize))
 for i in range(blocks):
@@ -272,8 +310,8 @@ for i in range(blocks):
   #xx.shape
   norms[start_index:end_index] = xx
   vectors_norm[start_index:end_index] = np.divide(vectors_norm[start_index:end_index], xx.reshape(-1,1))
-#t1 = dt.datetime.now()
-#print('this took ',t1-t0)
+t1 = dt.datetime.now()
+print('this took ',t1-t0)
 
 # test the normalized vectors
 #np.dot(vectors_norm[127], vectors_norm[127])
@@ -281,7 +319,7 @@ for i in range(blocks):
 #@@ save vectors_norm, load them at runtime for "search engine"
 
 # clean-up / save RAM
-#del wv, norms
+del wv, norms
 
 #%% Test the code that builds the match_vector function below
 
@@ -329,63 +367,66 @@ for i in range(blocks):
 
 #%% Function to take output from create_vector function, find closest matching embedding, related index, and then associated word
 
-def match_vector(unique_wordvec, response_type = "Top Five" or "Best Answer"):
+
+def match_vector(unique_wordvec, response_nmb = 5):
     
     # Check if the vector is normalized; if not, normalize the input vector
-    normalized_test = np.dot(unique_wordvec, unique_wordvec)
+    normalized_test = np.sqrt(np.dot(unique_wordvec, unique_wordvec))
     
-    if (1 - normalized_test) > 0.01:
-        unique_vecnorm = unique_wordvec/ np.dot(unique_wordvec, unique_wordvec)
+    if np.abs(1 - normalized_test) > 0.01:
+        unique_vecnorm = unique_wordvec/ normalized_test
     else:
         unique_vecnorm = unique_wordvec
         
     
     blocksize = 10000
     blocks = int(np.ceil(vectors_norm.shape[0]/blocksize))
-    tdict = {} # dictionary to keep track of each block's candidate for closest vector
+    top_block_list = []
+    
+
     
     for i in range(blocks):
-      # i = 0
-      start_index = i*blocksize
-      end_index = min((i+1)*blocksize, vectors_norm.shape[0])
-      # select block
-      x1 = np.dot(vectors_norm[start_index:end_index], unique_wordvec)
-      pos1 = np.argmax(x1)
-      tdict[i] = (pos1 + i*blocksize, x1[pos1]) # think why adding i*blocksize
-      
-    tdict
-    tlist = list(tdict.values())
-    dist_blocks = pd.DataFrame(dict(pos = [k for (k,v) in tlist], dist=[v for (k,v) in tlist]))
-    maxpos = np.argmax(dist_blocks.dist)
-    real_max_pos = int(dist_blocks.iloc[maxpos]['pos'])
-    
-    # Need to find the top 5 answers - possibly exclude the previously selected answers from the argmax calculation
-    # Potential Answer: Since the dataframe is sorted by distance, we can subset the dataframe to the first 5 observations
-    
-    top_five_pos = dist_blocks.nlargest(5, 'dist')
+        # i = 0
+        start_index = i*blocksize
+        end_index = min((i+1)*blocksize, vectors_norm.shape[0])
+        # select block
+        x1 = np.dot(vectors_norm[start_index:end_index], unique_vecnorm)
+        
+        x2 = pd.DataFrame(dict(idx=np.arange(start_index, end_index), sim=x1))
+        
+        x3 = x2.sort_values(by='sim', ascending=False)
+        
+        top_five_pos = x3.nlargest(response_nmb, 'sim')
 
-    top_five_pos = top_five_pos.rename(columns={'pos':'index'})
+        top_block_list.append(top_five_pos)
+    
+    top_of_blocks = pd.concat(top_block_list)
+    
+    top_of_top = top_of_blocks.nlargest(response_nmb, 'sim')
+    
+    top_of_top.rename(columns={'idx':'index'}, inplace=True)
 
-    inner_join = pd.merge(word_index_df, top_five_pos, on = ['index'])
+    inner_join = pd.merge(word_index_df, top_of_top, on = ['index'])
+    
+    inner_join = inner_join.sort_values(by='sim', ascending=False)
     
     # Should return a dictionary to be referenced 
        
     return inner_join
 
+#%% Test the create vector function
+
+
+
 #%% Final function that pulls previously constructed functions together, ingests input string and returns top five answers
 
 # Choose top answer or top 5 with distances option
 
-def query_answer(input_string, response_type = "Top 5" or "Best Answer"):
+def query_answer(input_string, response_nmb = 5):
+    
     parsed_string = parse(input_string)
     unique_vec = create_vector(parsed_string)
-    
-    if response_type == "Top 5":
-        response = match_vector(unique_vec, response_type = "Top 5")
-    elif response_type == "Best Answer": 
-        response = match_vector(unique_vec, "Best Answer")
-    else: 
-        response = match_vector(unique_vec, response_type = "Top 5")
+    response = match_vector(unique_vec, response_nmb)
     
     return response
             
@@ -395,12 +436,11 @@ def use_tool():
     st.header("Test Out Gensim Word Embeddings")
     
     text_query_str = st.text_input(label = 'Insert your word query here:', help = "Example: 2.2*King - 3.1*Man + 5.7*Woman")
-    
-    response_type = st.selectbox("Choose which type of answer you'd like to see: ",
-                                 ('Top 5', 'Best Response'))
-    
+        
     st.text("Both response types display the distances")
     
+    response_nmb = int(st.text_input('Select how many answers to see:', value = '3', help = "Insert a integer for how many results"))
+
     start_button = st.button("Run", key = "Run_Query_Answer")
     
     if start_button:
@@ -408,10 +448,10 @@ def use_tool():
         # Insert Jeopardy waiting music here: 
         #st.audio(data, start_time = t0)
         
-        response = query_answer(text_query_str, response_type=response_type)
+        response = query_answer(text_query_str, response_nmb=response_nmb)
         st.success("Done!")
         
-        st.write(response_type, ":", response)
+        st.write(response_nmb, ":", response)
         
 #%% Create the app with loaded data
 
